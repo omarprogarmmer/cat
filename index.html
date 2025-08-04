@@ -1,20 +1,396 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" >
 <head>
+  <!-- أضف هذه الأسطر في قسم head -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#457b9d">
+
+<!-- أضف هذا السكريبت قبل إغلاق body -->
+<script>
+  // تسجيل Service Worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => console.log('ServiceWorker registered'))
+        .catch(err => console.log('ServiceWorker registration failed: ', err));
+    });
+  }
+</script>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تطبيقي بدون إنترنت</title>
-  <link rel="manifest" href="manifest.json">
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').then(() => {
-        console.log('✅ Service Worker تم التسجيل');
-      });
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>موقعي التعليمي</title>
+  <style>
+    :root {
+      --light-gray: #f2f2f2;
+      --soft-green: #a8dadc;
+      --moderate-blue: #457b9d;
+      --dark-text: #1d3557;
     }
-  </script>
+
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      direction: rtl;
+      margin: 0;
+      background-color: var(--light-gray);
+      color: var(--dark-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 56px;
+      background-color: var(--soft-green);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      z-index: 100;
+
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      padding: 0 1rem;
+    }
+
+    #settingsBtn {
+      background-color: var(--moderate-blue);
+      color: white;
+      border: none;
+      border-radius: 20%;
+      width: 40px;
+      height: 40px;
+      font-size: 1.4rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s ease;
+    }
+
+    #settingsBtn:hover {
+      background-color: var(--dark-text);
+    }
+
+    header h1 {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--dark-text);
+    }
+
+    main {
+      flex: 1;
+      padding: 60px 1rem 2rem;
+      max-width: 900px;
+      margin: 0 auto 40px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      min-height: 320px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: repeat(2, 160px);
+      grid-gap: 25px 30px;
+      justify-content: center;
+      width: 100%;
+    }
+
+    button.lesson-btn {
+      width: 160px;
+      height: 160px;
+      padding: 15px 10px;
+      font-size: 18px;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: var(--moderate-blue);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+      user-select: none;
+      font-weight: 600;
+    }
+
+    button.lesson-btn:hover {
+      background-color: var(--dark-text);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+      transform: translateY(-4px);
+    }
+
+    button.lesson-btn:active {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.20);
+    }
+
+    button.lesson-btn img {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.15));
+      transition: transform 0.3s ease;
+    }
+
+    button.lesson-btn:hover img {
+      transform: scale(1.1) rotate(5deg);
+    }
+
+    button.lesson-btn.active {
+      background-color: var(--dark-text);
+      box-shadow: 0 0 15px rgba(29,53,87,0.8);
+    }
+
+    @media (max-width: 500px) {
+      .container {
+        grid-template-columns: repeat(2, 1fr);
+        width: 90vw;
+        padding: 0;
+      }
+      button.lesson-btn {
+        width: 100%;
+        height: 140px;
+        font-size: 16px;
+        gap: 8px;
+      }
+      button.lesson-btn img {
+        width: 50px;
+        height: 50px;
+      }
+    }
+
+    /* نافذة الإعدادات المنبثقة */
+    #settingsModal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: white;
+      padding: 25px 30px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      width: 320px;
+      max-width: 90vw;
+      z-index: 1000;
+      transition: transform 0.3s ease;
+    }
+
+    #settingsModal.active {
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    #settingsModal h2 {
+      margin-top: 0;
+      color: var(--dark-text);
+      margin-bottom: 15px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    #settingsModal label {
+      display: block;
+      margin-bottom: 12px;
+      font-weight: 600;
+      color: var(--dark-text);
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    #settingsModal input[type="checkbox"] {
+      margin-left: 10px;
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+    }
+
+    #settingsModal button.close-btn {
+      margin-top: 25px;
+      background: var(--moderate-blue);
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      width: 100%;
+      font-size: 1rem;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+
+    #settingsModal button.close-btn:hover {
+      background: var(--dark-text);
+    }
+
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(29, 53, 87, 0.5);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease;
+      z-index: 900;
+    }
+
+    #overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* شاشة الترحيب */
+    #splashScreen {
+      position: fixed;
+      top: 0; right: 0; bottom: 0; left: 0;
+      background-color: var(--moderate-blue);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2rem;
+      font-weight: bold;
+      z-index: 1100;
+      cursor: pointer;
+      transition: opacity 0.5s ease;
+      text-align: center;
+      padding: 1rem;
+      user-select: none;
+    }
+  </style>
 </head>
 <body>
-  <h1>مرحباً بك!</h1>
-  <p>يمكنك استخدام هذا التطبيق بدون إنترنت</p>
+
+  <!-- شاشة الترحيب -->
+  <div id="splashScreen">مرحباً بك في موقعي التعليمي</div>
+
+  <header>
+    <button id="settingsBtn" title="الإعدادات">⚙️</button>
+    <h1>موقعي التعليمي</h1>
+  </header>
+
+  <main>
+    <div class="container">
+      <button class="lesson-btn" onclick="goToLink('https://omarprogarmmer.github.io/lessons1/', this)">
+        <img src="مكتبة.jpg" alt="درس 1" />
+        درس 1
+      </button>
+      <button class="lesson-btn" onclick="goToLink('https://omarprogarmmer.github.io/lessons1/', this)">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828817.png" alt="درس 2" />
+        درس 2
+      </button>
+      <button class="lesson-btn" onclick="goToLink('https://chatgpt.com/c/688a1385-321c-800e-9489-966dcab2c5c7', this)">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828859.png" alt="قارئ 1" />
+        قارئ 1
+      </button>
+      <button class="lesson-btn" onclick="goToLink('https://example.com/reader2', this)">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828884.png" alt="قارئ 2" />
+        قارئ 2
+      </button>
+    </div>
+  </main>
+
+  <div id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <h2 id="settingsTitle">إعدادات الموقع</h2>
+    <label>
+      <input type="checkbox" id="darkModeToggle" />
+      تفعيل الوضع الليلي
+    </label>
+    <label>
+      <input type="checkbox" id="notificationsToggle" checked />
+      تمكين الإشعارات
+    </label>
+    <button class="close-btn" onclick="closeSettings()">إغلاق</button>
+  </div>
+
+  <div id="overlay"></div>
+
+<script>
+  function goToLink(url, btn) {
+    // تفعيل الزر المحدد
+    document.querySelectorAll('.lesson-btn').forEach(button => {
+      button.classList.remove('active');
+    });
+    btn.classList.add('active');
+
+    // الذهاب للرابط
+    window.location.href = url;
+  }
+
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsModal = document.getElementById('settingsModal');
+  const overlay = document.getElementById('overlay');
+
+  settingsBtn.addEventListener('click', () => {
+    settingsModal.classList.add('active');
+    overlay.classList.add('active');
+  });
+
+  function closeSettings() {
+    settingsModal.classList.remove('active');
+    overlay.classList.remove('active');
+  }
+
+  overlay.addEventListener('click', closeSettings);
+
+  const darkModeToggle = document.getElementById('darkModeToggle');
+  darkModeToggle.addEventListener('change', () => {
+    const main = document.querySelector('main');
+    if(darkModeToggle.checked) {
+      document.body.style.backgroundColor = 'var(--dark-text)';
+      document.body.style.color = 'var(--soft-green)';
+      main.style.backgroundColor = '#2b3a67';
+    } else {
+      document.body.style.backgroundColor = 'var(--light-gray)';
+      document.body.style.color = 'var(--dark-text)';
+      main.style.backgroundColor = 'white';
+    }
+  });
+
+  // شاشة الترحيب مع عبارات تشجيعية
+  const splash = document.getElementById('splashScreen');
+  const messages = [
+    "مرحباً بك في موقعي التعليمي",
+    "كل خطوة تتعلمها تقربك من هدفك!",
+    "لا تيأس، المحاولة طريق النجاح!",
+    "ابدأ الآن، المستقبل ينتظرك!",
+    "المعرفة نور يضيء دربك."
+  ];
+  let idx = 0;
+
+  function showNextMessage() {
+    if (idx < messages.length) {
+      splash.textContent = messages[idx];
+      idx++;
+      setTimeout(showNextMessage, 1500);
+    } else {
+      hideSplash();
+    }
+  }
+
+  function hideSplash() {
+    splash.style.opacity = '0';
+    setTimeout(() => splash.style.display = 'none', 500);
+  }
+
+  window.addEventListener('load', () => {
+    showNextMessage();
+  });
+
+  splash.addEventListener('click', hideSplash);
+</script>
+  
 </body>
 </html>
